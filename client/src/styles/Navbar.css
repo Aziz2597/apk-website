@@ -1,0 +1,92 @@
+.navbar {
+    background-color: #0b2222;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    padding: 10px 0;
+    margin: 0;
+  }
+  
+  .navbar-logo {
+    height: 70px;
+    width: 200px;
+    cursor: pointer;
+  }
+  
+  .navbar-menu {
+    list-style: none;
+    display: flex;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .navbar-item {
+    margin-right: 20px;
+  }
+  
+  .navbar-link {
+    color: rgb(7, 1, 1);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+  
+  .navbar-link:hover {
+    color: #007bff;
+  }
+  
+  .navbar-right {
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-input {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    margin-right: 5px;
+  }
+  
+  .search-icon {
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .navbar-logout {
+    margin-left: 20px;
+  }
+  
+  .logout-button {
+    background-color: red;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-left: 30px;
+    margin-right: 30px;
+  }
+  
+  .logout-button:hover {
+    background-color: darkred;
+  }
+  
+  .subnavbar {
+    background-color: #000a0a;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    margin: 0;
+  }
+  
+  .subnavbar-link {
+    margin: 0 28px; 
+    color: white;
+    text-decoration: none;
+  }
+  
+  .subnavbar-link:hover {
+    color: #007bff;
+  }
+  

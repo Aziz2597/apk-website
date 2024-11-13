@@ -1,0 +1,77 @@
+/* Profile.css */
+.profile-container {
+    margin: 20px auto;
+    padding: 20px;
+    max-width: 800px;
+    text-align: center;
+  }
+  
+  .profile-title {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+  
+  .profile-details {
+    margin-bottom: 20px;
+  }
+  
+  .admin-section {
+    margin-top: 20px;
+  }
+  
+  .admin-title {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  
+  .admin-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .admin-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .admin-item:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .admin-user {
+    flex: 1;
+    text-align: left;
+  }
+  
+  .admin-button {
+    background-color: #ff0000;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .admin-button:hover {
+    background-color: darkred;
+  }
+  
+  .upload-name {
+    font-weight: bold;
+    margin-right: 10px;
+    flex: 1;
+    text-align: left;
+  }
+  
+  .upload-icon {
+    width: 50px;
+    height: 50px;
+    margin-right: 20px;
+  }
