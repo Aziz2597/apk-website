@@ -284,7 +284,7 @@ router.delete('/:appName/:appVersion', auth, async (req, res) => {
   }
 });
 
-router.delete('/api/uploads/:appName/icon', async (req, res) => {
+router.delete('/:appName/icon', async (req, res) => {
   const { appName } = req.params;
 
   try {
