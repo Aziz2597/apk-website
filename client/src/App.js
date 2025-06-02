@@ -13,7 +13,6 @@ import SearchResults from './components/SearchResults';
 import CategoryPage from './components/CategoryPage';
 import VersionPage from './components/VersionPage';
 import './App.css';
-
 const ProtectedRoute = ({ element }) => {
   const { isAdmin, loading } = useContext(AuthContext);
 
@@ -35,7 +34,7 @@ const App = () => {
           <Route path="/download/:id" element={<DownloadPage />} />
           <Route path="/search" element={<SearchResults />}   /> 
           <Route path="/category/:category" element={<CategoryPage />} /> 
-          <Route path="/:appName/versions" element={<VersionPage />} />
+          <Route path="/:appName/versions" element={<ProtectedRoute element={<VersionPage />} />} />
         </Routes>
       </div>
     </Router>

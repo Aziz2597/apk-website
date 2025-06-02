@@ -9,6 +9,10 @@ const adminCredentials = require('../../adminCredentials'); // Import admin cred
 require('dotenv').config();
 
 const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) {
+  console.error('❌ JWT_SECRET is missing in environment variables');
+  process.exit(1); // Immediately crash with clear reason
+}
 
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
@@ -21,7 +25,7 @@ router.post('/login', async (req, res) => {
       const token = jwt.sign(payload, jwtSecret, { expiresIn: '30m' });
 
       res.cookie('token', token, { httpOnly: true });
-      return res.json({ token });
+      return res.json({ email, role: 'admin' });
     } else {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }

@@ -177,7 +177,7 @@ export default Profile;
 
 
 
-client\src\components\Register.js:
+//client\src\components\Register.js:
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';

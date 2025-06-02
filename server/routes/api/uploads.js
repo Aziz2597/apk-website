@@ -7,6 +7,7 @@ const Grid = require('gridfs-stream');
 const path = require('path');
 const Upload = require('../../models/Upload'); // Correct import path for Upload model
 const auth = require('../../middlewares/auth'); // Import auth middleware
+const { ObjectId } = require('mongodb');
 
 // Mongo URI
 const mongoURI = process.env.MONGO_URI;
@@ -15,11 +16,11 @@ const mongoURI = process.env.MONGO_URI;
 const conn = mongoose.createConnection(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 // Init gfs
-let gfs;
+let gridFSBucket;
 conn.once('open', () => {
-  // Init stream
-  gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection('uploads');
+  gridFSBucket = new mongoose.mongo.GridFSBucket(conn.db, {
+    bucketName: 'uploads'
+  });
 });
 
 // Create storage engine
@@ -112,18 +113,25 @@ router.get('/:appName/versions', async (req, res) => {
 router.get('/icon/:filename', async (req, res) => {
   try {
     const filename = req.params.filename;
-    gfs.files.findOne({ filename: filename }, (err, file) => {
-      if (err || !file) {
-        return res.status(404).json({ msg: 'No file exists' });
-      }
 
-      const readstream = gfs.createReadStream(file.filename);
-      readstream.pipe(res);
-    });
+    const filesCursor = await gridFSBucket.find({ filename }).toArray();
+    const file = filesCursor[0];
+
+    if (!file) {
+      return res.status(404).json({ msg: 'No file exists' });
+    }
+
+    res.set('Content-Type', file.contentType || 'image/png');
+    res.set('Content-Disposition', `inline; filename="${file.filename}"`);
+
+    const readstream = gridFSBucket.openDownloadStream(file._id);
+    readstream.pipe(res);
+
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 });
+
 
 router.get('/files', auth, async (req, res) => {
   try {
@@ -172,23 +180,35 @@ router.get('/:id', async (req, res) => {
     }
 
     let filename, fileIdToDownload;
+
+    // Sanitize appName and appVersion to be safe in filenames
+    const sanitizedAppName = file.appName.replace(/[^a-zA-Z0-9]/g, '');
+    const sanitizedVersion = file.appVersion.replace(/[^a-zA-Z0-9.]/g, '');
+
     if (req.query.type === 'original') {
       if (!file.originalFilepath) {
         return res.status(404).json({ msg: 'Original file not uploaded' });
       }
-      filename = file.originalFilename;
       fileIdToDownload = file.originalFilepath;
+      filename = `${sanitizedAppName}_${sanitizedVersion}_OG.apk`;
     } else if (req.query.type === 'modified') {
       if (!file.modFilepath) {
         return res.status(404).json({ msg: 'Modified file not uploaded' });
       }
-      filename = file.modFilename;
       fileIdToDownload = file.modFilepath;
+      filename = `${sanitizedAppName}_${sanitizedVersion}_MOD.apk`;
     } else {
       return res.status(400).json({ msg: 'Specify file type (original or modified)' });
     }
 
-    gfs.openDownloadStream(mongoose.Types.ObjectId(fileIdToDownload))
+    // Determine MIME type
+    const mime = require('mime-types');
+    const mimeType = mime.lookup(filename) || 'application/vnd.android.package-archive';
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    gridFSBucket.openDownloadStream(mongoose.Types.ObjectId(fileIdToDownload))
       .pipe(res)
       .on('error', (err) => {
         console.error('Error streaming file:', err);
@@ -198,6 +218,103 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     console.error('Error downloading file:', err);
     res.status(500).json({ msg: 'Server error' });
+  }
+});
+
+
+// DELETE a version by appName and appVersion
+// DELETE a specific file (original or modified) by appName, appVersion and type query param
+router.delete('/:appName/:appVersion', auth, async (req, res) => {
+  const { appName, appVersion } = req.params;
+  const { type } = req.query;  // expect 'original' or 'modified'
+
+  if (!type || !['original', 'modified'].includes(type)) {
+    return res.status(400).json({ msg: "Please specify file type to delete: 'original' or 'modified'" });
+  }
+
+  try {
+    // Find the Upload document
+    const uploadEntry = await Upload.findOne({ appName, appVersion });
+
+    if (!uploadEntry) {
+      return res.status(404).json({ msg: 'Version not found' });
+    }
+
+    let fileIdToDelete;
+    if (type === 'original') {
+      fileIdToDelete = uploadEntry.originalFilepath;
+      if (!fileIdToDelete) {
+        return res.status(404).json({ msg: 'Original file not found for this version' });
+      }
+    } else if (type === 'modified') {
+      fileIdToDelete = uploadEntry.modFilepath;
+      if (!fileIdToDelete) {
+        return res.status(404).json({ msg: 'Modified file not found for this version' });
+      }
+    }
+
+    // Delete the file from GridFS
+    if (mongoose.Types.ObjectId.isValid(fileIdToDelete)) {
+      await gridFSBucket.delete(new mongoose.Types.ObjectId(fileIdToDelete));
+    }
+
+    // Update the Upload document by removing the file reference and filename fields for that type
+    if (type === 'original') {
+      uploadEntry.originalFilepath = null;
+      uploadEntry.originalFilename = null;
+    } else if (type === 'modified') {
+      uploadEntry.modFilepath = null;
+      uploadEntry.modFilename = null;
+    }
+
+    // If both original and modified files are now missing, delete the entire document
+    if (!uploadEntry.originalFilepath && !uploadEntry.modFilepath) {
+      await Upload.deleteOne({ _id: uploadEntry._id });
+      return res.json({ msg: `Both files deleted, version ${appVersion} of app ${appName} removed` });
+    }
+
+    // Else save updated Upload doc
+    await uploadEntry.save();
+
+    res.json({ msg: `${type} file deleted from version ${appVersion} of app ${appName}`, uploadEntry });
+
+  } catch (err) {
+    console.error('Delete file error:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+});
+
+router.delete('/api/uploads/:appName/icon', async (req, res) => {
+  const { appName } = req.params;
+
+  try {
+    const versionsCollection = db.collection('versions'); // or wherever version docs are stored
+    const filesCollection = db.collection('uploads.files');
+
+    // Find the version document for this app (latest version or the one you want)
+    const versionDoc = await versionsCollection.findOne({ appName });
+
+    if (!versionDoc || !versionDoc.iconFilename) {
+      return res.status(404).json({ msg: 'Icon filename not found for this app' });
+    }
+
+    // Find the GridFS file by filename
+    const iconFileDoc = await filesCollection.findOne({ filename: versionDoc.iconFilename });
+
+    if (!iconFileDoc) {
+      return res.status(404).json({ msg: 'Icon file not found in GridFS' });
+    }
+
+    // Delete the file from GridFS using its _id
+    await bucket.delete(ObjectId(iconFileDoc._id));
+
+    // Optionally: Remove iconFilename field from versionDoc or update versionDoc if needed
+    // await versionsCollection.updateOne({ _id: versionDoc._id }, { $unset: { iconFilename: "" } });
+
+    return res.status(200).json({ msg: 'Icon file deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting icon file:', err);
+    return res.status(500).json({ msg: 'Server error deleting icon file' });
   }
 });
 

@@ -75,16 +75,15 @@
 }
 
 .delete-button {
-    background-color: #ff4d4d; /* Red color */
-    color: white;
-    border: none;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    margin-left: 20px; /* Left margin from the version text */
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #ff4d4d;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
-
 .delete-button:hover {
     background-color: #cc0000; /* Darker red when hovered */
 }
