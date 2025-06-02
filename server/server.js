@@ -24,6 +24,11 @@ app.use('/api/uploads', require('./routes/api/uploads'));
 app.use('/api/files', require('./routes/api/files'));
 app.use('/icons', express.static(path.join(__dirname, 'icons')));
 
-const PORT = process.env.PORT || 5000;
+app.get('/', (req, res) => {
+  res.send('Backend API is running 🚀');
+});
+
+
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
